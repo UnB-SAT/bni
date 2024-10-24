@@ -12,7 +12,7 @@ int main(void) {
 	char *input;
 	for ( ; ; ) {
 		if (checktrue_goal())
-			if(!ask_yes_no("Goal has been hit! Do u want to continue? (Y/n)\n")) break;
+			if(!ask_yes_no("Goal has been hit! Do u want to continue? (y/N)\n")) break;
 		printf("Please enter one of the currently available actions:\n");
 		check_show_actions("/tmp/actions");
 		show_actions("/tmp/actions");
@@ -82,7 +82,7 @@ int ask_yes_no(const char *question) {
 			if (strcmp(response, "Y") == 0 || strcmp(response, "YES") == 0) {
 				free(response);
 				return 1;
-			} else if (strcmp(response, "N") == 0 || strcmp(response, "NO") == 0) {
+			} else if (strcmp(response, "N") == 0 || strcmp(response, "NO") == 0 || (response && response[0] == '\0')) {
 				free(response);
 				return 0;
 			}
