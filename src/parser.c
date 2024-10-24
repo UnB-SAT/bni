@@ -13,8 +13,8 @@ int main(int argc, char *argv[]) {
 
 	FILE *domain_file = fopen(domain_file_name, "r"), 
 		 *problem_file = fopen(problem_file_name, "r"), 
-		 *domainc = fopen("pddl.c", "w"),
-		 *domainh = fopen("pddl.h", "w"),
+		 *domainc = fopen("/tmp/pddl.c", "w"),
+		 *domainh = fopen("/tmp/pddl.h", "w"),
 		 *tmpshow = fopen("/tmp/tmpshow", "w"),
 		 *tmpapply = fopen("/tmp/tmpapply", "w");
 	if (domain_file == NULL) {
@@ -41,7 +41,9 @@ int main(int argc, char *argv[]) {
 	char tokend, tokenp;
 	LinkedList *hd = create_list(), *hp = create_list(), *hl = create_list();
 	SymbolTable *st = create_st();
-	fprintf(domainc, "#include <stdio.h>\n#include \"pddl.h\"\n\n");
+
+	fprintf(domainc, "#include <stdio.h>\n\n#ifndef PDDL_HEADER\n\t#define PDDL_HEADER \"pddl.h\"\n#endif\n#include PDDL_HEADER\n\n");
+
 	fprintf(domainh, "#ifndef PDDL_H\n#define PDDL_H\n#include <stdbool.h>\n#include <string.h>\n#define and &&\n#define or ||\n\n");
 
 	// Problem parser :objects

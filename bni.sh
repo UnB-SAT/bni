@@ -2,7 +2,7 @@
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 CURRENT_DIR="$(pwd)"
-OUTPUT_DIR="bni.out"
+OUTPUT_DIR="$CURRENT_DIR/bni.out"
 output_file="pddl"
 exec_repl=false
 
@@ -58,21 +58,31 @@ fi
 if [[ ! -d "$OUTPUT_DIR" ]]; then
 	mkdir "$OUTPUT_DIR"
 fi
-find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.c -print | while read -r link; do
-    rm "$link"
-    cp $SCRIPT_DIR/pddl.c "$link"
-done
-find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.h -print | while read -r link; do
-    rm "$link"
-    cp $SCRIPT_DIR/pddl.h "$link"
-done
 
-mv pddl.c pddl.h $SCRIPT_DIR 2> /dev/null
-ln -sf $SCRIPT_DIR/pddl.c $OUTPUT_DIR/"$output_file".c
-ln -sf $SCRIPT_DIR/pddl.h $OUTPUT_DIR/"$output_file".h
+# find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.c -print | while read -r link; do
+#     rm "$link"
+#     cp $SCRIPT_DIR/pddl.c "$link"
+# done
+# find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.h -print | while read -r link; do
+#     rm "$link"
+#     cp $SCRIPT_DIR/pddl.h "$link"
+# done
+# 
+# mv pddl.c pddl.h $SCRIPT_DIR 2> /dev/null
+# ln -sf $SCRIPT_DIR/pddl.c $OUTPUT_DIR/"$output_file".c
+# ln -sf $SCRIPT_DIR/pddl.h $OUTPUT_DIR/"$output_file".h
+
+mv /tmp/pddl.c "$OUTPUT_DIR/$output_file.c"
+mv /tmp/pddl.h "$OUTPUT_DIR/$output_file.h"
 
 if $exec_repl; then
-	make PREFIX="$CURRENT_DIR" -C "$SCRIPT_DIR" repl
+	echo "$OUTPUT_DIR $output_file"
+	if [[ ! -f "$OUTPUT_DIR/$output_file.c" || ! -f "$OUTPUT_DIR/$output_file.h" ]]; then
+		echo "Error: PDDL files (pddl.c or pddl.h) do not exist. Please ensure they are generated correctly." >&2
+		exit 1
+	fi
+	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" repl
+	# make PREFIX="$CURRENT_DIR" -C "$SCRIPT_DIR" repl
 	status=$?
 	if [[ $status -ne 0 ]]; then
 		echo "Error: The 'make repl' command failed." >&2

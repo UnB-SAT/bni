@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include "pddl.h"
+
+#ifndef PDDL_HEADER
+	#define PDDL_HEADER "pddl.h"
+#endif
+#include PDDL_HEADER
 
 char **action_name_completion(const char *text, int start, int end);
 char *action_name_generator(const char *text, int state);

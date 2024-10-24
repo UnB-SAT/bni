@@ -2,7 +2,7 @@
 CC = gcc
 OPT = -O3
 CFLAGS = -Iinclude
-PDDL_FLAGS = -I$(CURDIR)
+# PDDL_FLAGS = -I$(CURDIR)
 DEBUG_FLAGS = -ggdb3
 RUN_FLAG := $(OPT)
 READLINE_FLAGS = -lreadline
@@ -15,6 +15,11 @@ REPL_SRC := $(REPL_DIR)/repl.c
 OBJ = $(SRC:.c=.o)
 TARGET = parser
 PREFIX := $(CURDIR)
+
+# Default values for PDDL files (override via command line)
+OUTPUT_DIR := $(PREFIX)/bni.out
+PDDL_FILE := $(PREFIX)/$(OUTPUT_DIR)/pddl.c
+PDDL_HEADER := $(PREFIX)/$(OUTPUT_DIR)/pddl.h
 
 # Default target
 all: $(TARGET)
@@ -30,7 +35,8 @@ $(TARGET): $(OBJ)
 # Complile REPL and pddl.c
 .PHONY: repl
 repl:
-	$(CC) $(RUN_FLAG) $(CURDIR)/pddl.c $(PDDL_FLAGS) $(REPL_SRC) $(READLINE_FLAGS) -o $(PREFIX)/$@
+	$(CC) $(RUN_FLAG) -I$(OUTPUT_DIR) $(PDDL_FILE) -DPDDL_HEADER=\"$(PDDL_HEADER)\" $(REPL_SRC) $(READLINE_FLAGS) -o $(PREFIX)/$@
+	# $(CC) $(RUN_FLAG) $(CURDIR)/pddl.c $(PDDL_FLAGS) $(REPL_SRC) $(READLINE_FLAGS) -o $(PREFIX)/$@
 
 # Clean up build files
 clean:
