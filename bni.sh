@@ -3,8 +3,13 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 CURRENT_DIR="$(pwd)"
 OUTPUT_DIR="$CURRENT_DIR/bni.out"
+BASENAME=$(mktemp)
+PDDLC=$BASENAME.pddl.c
+PDDLH=$BASENAME.pddl.h
 output_file="pddl"
 exec_repl=false
+
+rm $BASENAME
 
 function show_help {
 	echo "Usage: $0 [options] <domain_file> <problem_file>"
@@ -48,7 +53,7 @@ if [[ ! -r "$PROBLEM" ]]; then
 	exit 1
 fi
 
-"$SCRIPT_DIR/parser" "$DOMAIN" "$PROBLEM"
+"$SCRIPT_DIR/parser" "$DOMAIN" "$PROBLEM" "$PDDLC" "$PDDLH"
 status=$?
 if [[ $status -ne 0 ]]; then
 	echo "Error: The parser encountered a problem." >&2
@@ -72,8 +77,8 @@ fi
 # ln -sf $SCRIPT_DIR/pddl.c $OUTPUT_DIR/"$output_file".c
 # ln -sf $SCRIPT_DIR/pddl.h $OUTPUT_DIR/"$output_file".h
 
-mv /tmp/pddl.c "$OUTPUT_DIR/$output_file.c"
-mv /tmp/pddl.h "$OUTPUT_DIR/$output_file.h"
+mv $PDDLC "$OUTPUT_DIR/$output_file.c"
+mv $PDDLH "$OUTPUT_DIR/$output_file.h"
 
 if $exec_repl; then
 	echo "$OUTPUT_DIR $output_file"

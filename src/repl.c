@@ -9,13 +9,14 @@ int main(void) {
 	initialize();
 	action_names = malloc(SIZENAMES * sizeof(char*));
 	if (action_names == NULL) perror("Error allocating initial memory for action_names"), exit(1);
-	char *input;
+	char *input, sactions[] = "/tmp/actions.XXXXXX";
+	int iactions = mkstemp(sactions);
 	for ( ; ; ) {
 		if (checktrue_goal())
 			if(!ask_yes_no("Goal has been hit! Do u want to continue? (y/N)\n")) break;
 		printf("Please enter one of the currently available actions:\n");
-		check_show_actions("/tmp/actions");
-		show_actions("/tmp/actions");
+		check_show_actions(sactions);
+		show_actions(sactions);
 		input = readline(">> ");
 		if (!input || strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0) break;
 		if (*input) add_history(input);
@@ -24,7 +25,7 @@ int main(void) {
 	}
 	free_names(), free(action_names);
 	// free(input), 
-	remove("/tmp/actions");
+	remove(sactions);
 	return 0;
 }
 

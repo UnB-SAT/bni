@@ -2,6 +2,7 @@
 #define PARSER_H
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include "symbol_table.h"
 #include "linked_list.h"

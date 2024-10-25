@@ -4,19 +4,25 @@ const char *OPERATORS[] = {"and", "or", "not", "forall", "when"};
 char obj_sentinel = 0; // Sentinela para objetos que nao tem tipo.
 
 int main(int argc, char *argv[]) {
-	if (argc != 3) {
-		printf("Usage: %s <domain_file> <problem_file>\n", argv[0]);
+	if (argc != 5) {
+		printf("Usage: %s <domain_file> <problem_file> <basename.pddl.c> <basename.pddl.h>\n", argv[0]);
 		return 1;
 	}
-	char *domain_file_name = argv[1], *problem_file_name = argv[2];
+	char *domain_file_name = argv[1], *problem_file_name = argv[2], *sdomainc = argv[3], *sdomainh = argv[4];
 	domain_file_name = preprocess_file(domain_file_name), problem_file_name = preprocess_file(problem_file_name);
+
+	char stmpshow[] = "/tmp/tmpshow.XXXXXX";
+	char stmpapply[] = "/tmp/tmpapply.XXXXXX";
+
+	int itmpshow = mkstemp(stmpshow);
+	int itmpapply = mkstemp(stmpapply);
 
 	FILE *domain_file = fopen(domain_file_name, "r"), 
 		 *problem_file = fopen(problem_file_name, "r"), 
-		 *domainc = fopen("/tmp/pddl.c", "w"),
-		 *domainh = fopen("/tmp/pddl.h", "w"),
-		 *tmpshow = fopen("/tmp/tmpshow", "w"),
-		 *tmpapply = fopen("/tmp/tmpapply", "w");
+		 *domainc = fopen(sdomainc, "w"),
+		 *domainh = fopen(sdomainh, "w"),
+		 *tmpshow = fdopen(itmpshow, "w"),
+		 *tmpapply = fdopen(itmpapply, "w");
 	if (domain_file == NULL) {
 		perror("Error opening domain file");
 		return 1;
@@ -83,14 +89,14 @@ int main(int argc, char *argv[]) {
 	fprintf(domainh, "void check_show_actions(const char *filename);\n");
 	fprintf(domainc, "void check_show_actions(const char *filename) {\n");
 	fprintf(domainc, "\tFILE *f = fopen(filename, \"w\");\n");
-	cat("/tmp/tmpshow", domainc);
-	remove("/tmp/tmpshow");
+	cat(stmpshow, domainc);
+	remove(stmpshow);
 	fprintf(domainc, "\tfclose(f);\n}\n");
 	fprintf(domainh, "int apply_actions(char *s);\n");
 	fprintf(domainc, "int apply_actions(char *s) {\n");
 	fprintf(domainc, "\tconst char *basename = strsep(&s, \"(\");\n");
-	cat("/tmp/tmpapply", domainc);
-	remove("/tmp/tmpapply");
+	cat(stmpapply, domainc);
+	remove(stmpapply);
 	fprintf(domainc, "\treturn 2;\n}\n");
 
 	// Problem parser
@@ -124,12 +130,13 @@ int main(int argc, char *argv[]) {
 
 char* preprocess_file(const char *f) {
 	size_t linecap = 0;
-	char token, *line = NULL, *filename = malloc(strlen(f) + 10);
+	char token, *line = NULL, *sfilename = malloc(strlen(f) + 15);
 	const char *basename = strrchr(f, '/');
 	if (basename == NULL) basename = f;
 	else basename++;
-	snprintf(filename, (strlen(f)+10), "/tmp/%s", basename);
-	FILE *basefile = fopen(f, "r"), *file = fopen(filename, "w");
+	snprintf(sfilename, (strlen(f)+10), "/tmp/%s.XXXXXX", basename);
+	int ifilename = mkstemp(sfilename);
+	FILE *basefile = fopen(f, "r"), *file = fdopen(ifilename, "w");
 	if (basefile == NULL) {
 		perror("Error opening base file in preprocessing file step.");
 		return NULL;
@@ -143,7 +150,7 @@ char* preprocess_file(const char *f) {
 		else if (token == '-') fprintf(file, "_");
 		else fprintf(file, "%c", tolower(token));
 	fclose(basefile), fclose(file), free(line);
-	return filename;
+	return sfilename;
 }
 
 void constants_n_objects(FILE *file, SymbolTable *st, Stack *stack, LinkedList *hl, char token) {
@@ -191,7 +198,13 @@ void constants_n_objects(FILE *file, SymbolTable *st, Stack *stack, LinkedList *
 }
 
 void predicates(FILE *domain_file, FILE *domainc, FILE *domainh, SymbolTable *st, Stack *parenthesis_stack, char tokend) {
-	FILE *tmpfilec = fopen("/tmp/tmpfilec", "a"), *tmpfileh = fopen("/tmp/tmpfileh", "a");
+	char stmpfilec[] = "/tmp/tmpfilec.XXXXXX";
+	char stmpfileh[] = "/tmp/tmpfileh.XXXXXX";
+
+	int itmpfilec = mkstemp(stmpfilec);
+	int itmpfileh = mkstemp(stmpfileh);
+
+	FILE *tmpfilec = fdopen(itmpfilec, "a"), *tmpfileh = fdopen(itmpfileh, "a");
 	create_enums(domainc, domainh, st);
 	push(parenthesis_stack, '(');
 	// count = quantos '?' em uma linha.
@@ -244,14 +257,17 @@ void predicates(FILE *domain_file, FILE *domainc, FILE *domainh, SymbolTable *st
 		}
 	}
 	fclose(tmpfilec), fclose(tmpfileh);
-	cat("/tmp/tmpfilec", domainc), cat("/tmp/tmpfileh", domainh);
-	remove("/tmp/tmpfilec"), remove("/tmp/tmpfileh");
+	cat(stmpfilec, domainc), cat(stmpfileh, domainh);
+	remove(stmpfilec), remove(stmpfileh);
 	return;
 }
 
 void action(FILE *domain_file, FILE *domainc, FILE *domainh, FILE *tmpshow, FILE *tmpapply, Stack *domain, Stack *parenthesis_stack, char tokend, int act_count) {
 	LinkedList *ha = create_list();
-	FILE *tmpfile_check_show = fopen("/tmp/tmpfile_check_show", "w");
+	char stmpfile_check_show[] = "/tmp/tmpfile_check_show.XXXXXX";
+	int itmpfile_check_show = mkstemp(stmpfile_check_show);
+
+	FILE *tmpfile_check_show = fdopen(itmpfile_check_show, "w");
 	push(parenthesis_stack, '(');
 	char act_name[100];
 	fscanf(domain_file, "%s", act_name);
@@ -280,8 +296,8 @@ void action(FILE *domain_file, FILE *domainc, FILE *domainh, FILE *tmpshow, FILE
 		free_list(ha);
 		if (tokend != ' ') push(domain, tokend);
 	}
-	cat("/tmp/tmpfile_check_show", domainc);
-	remove("/tmp/tmpfile_check_show");
+	cat(stmpfile_check_show, domainc);
+	remove(stmpfile_check_show);
 	free_list(ha), free(ha);
 	return;
 }
@@ -369,7 +385,10 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 }
 
 void precondition(FILE *domain_file, FILE *domainc, Stack *domain, Stack *parenthesis_stack, char *act_name) {
-	FILE *toreturn = fopen("/tmp/toreturn", "w");
+	char storeturn[] = "/tmp/toreturn.XXXXXX";
+	int itoreturn = mkstemp(storeturn);
+
+	FILE *toreturn = fdopen(itoreturn, "w");
 	fprintf(toreturn, "\treturn ");
 	LinkedList *precondition = create_list();
 	Stack *operators = create_stack();
@@ -430,8 +449,8 @@ void precondition(FILE *domain_file, FILE *domainc, Stack *domain, Stack *parent
 		free_list(precondition);
 	}
 	fclose(toreturn);
-	cat("/tmp/toreturn", domainc);
-	remove("/tmp/toreturn");
+	cat(storeturn, domainc);
+	remove(storeturn);
 	if (flags[4]) fprintf(domainc, ");\n}\n");
 	else if (flags[3]) fprintf(domainc, "true);\n}\n");
 	else fprintf(domainc, "true;\n}\n");
@@ -517,7 +536,10 @@ void goal(FILE *problem_file, FILE *domainc, FILE *domainh, Stack *parenthesis_s
 	 * [0]: flag = padrao é zero toda vez que um ) torna-se igual 1
 	 * [1]: sigarg = flag dos argumento: é ou não é o primeiro argumento
 	 */
-	FILE *toreturn = fopen("/tmp/toreturn", "w");
+	char storeturn[] = "/tmp/toreturn.XXXXXX";
+	int itoreturn = mkstemp(storeturn);
+
+	FILE *toreturn = fdopen(itoreturn, "w");
 	fprintf(toreturn, "\treturn ");
 	while (fscanf(problem_file, "%c", &tokenp) != EOF && !is_empty_stack(parenthesis_stack)) {
 		if ((tokenp == ' ' || tokenp == '(' || tokenp == ')')) {
@@ -561,8 +583,8 @@ void goal(FILE *problem_file, FILE *domainc, FILE *domainh, Stack *parenthesis_s
 		}
 	}
 	fclose(toreturn);
-	cat("/tmp/toreturn", domainc);
-	remove("/tmp/toreturn");
+	cat(storeturn, domainc);
+	remove(storeturn);
 	free_stack(operators), free_stack(clauses);
 	free_list(goal_cond), free(goal_cond);
 	fprintf(domainc, ";\n}\n");
@@ -670,10 +692,13 @@ void create_forall_pre_goal(FILE *toread, FILE *towrite, LinkedList *types_list,
 	 */
 	Stack *parenthesis = create_stack(), *tokens = create_stack(), *operators = create_stack();
 	LinkedList *word = create_list();
-	char fixed = par_count, filename[256];
+	char fixed = par_count, sfilename[256];
 	par_count = create_fors(toread, towrite, types_list, par_count);
-	sprintf(filename, "/tmp/forall%d", forall_id);
-	FILE *forfile = fopen(filename, "w");
+
+	sprintf(sfilename, "/tmp/forall%d.XXXXXX", forall_id);
+	int ifilename = mkstemp(sfilename);
+
+	FILE *forfile = fdopen(ifilename, "w");
 	for (int i = 0; i < forall_id; i++) fprintf(forfile,  "\t");
 	fprintf(forfile, "\tif (!");
 	while (fscanf(toread, "%c", &token)) {
@@ -725,8 +750,8 @@ void create_forall_pre_goal(FILE *toread, FILE *towrite, LinkedList *types_list,
 		free_list(word);
 	}
 	fclose(forfile);
-	cat(filename, towrite);
-	remove(filename);
+	cat(sfilename, towrite);
+	remove(sfilename);
 	if (flags[4]) fprintf(towrite, "))");
 	else if (flags[3]) fprintf(towrite, "true))");
 	else fprintf(towrite, "true)");
