@@ -20,7 +20,9 @@ int main(void) {
 		input = readline(">> ");
 		if (!input || strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0) break;
 		if (*input) add_history(input);
-		apply_actions(input);
+		char ar = apply_actions(input);
+		if (ar == 2) printf("\033[31;1mATTENTION: \033[90mUnrecognised command. Check spelling and try again.\033[0m\n");
+		else if (ar == 1) printf("\033[31;1mATTENTION: \033[90mAction with invalid parameters.\033[0m\n");
 		free_names(), free(input);
 	}
 	free_names(), free(action_names);
@@ -52,7 +54,8 @@ void show_actions(const char *filename) {
 	if (f == NULL) perror("Error opening file for action_names"), exit(1);
 	int i = 0;
 	char str[500];
-	while (fscanf(f, "%s", str) != EOF) {
+	while (fscanf(f, "%[^\n]s", str) != EOF) {
+		fscanf(f, "\n");
 		if (i == SIZENAMES-1) {
 			SIZENAMES *= 2; 
 			action_names = realloc(action_names, SIZENAMES * sizeof(char*)); 

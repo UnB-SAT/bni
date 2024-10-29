@@ -94,7 +94,9 @@ int main(int argc, char *argv[]) {
 	fprintf(domainc, "\tfclose(f);\n}\n");
 	fprintf(domainh, "int apply_actions(char *s);\n");
 	fprintf(domainc, "int apply_actions(char *s) {\n");
-	fprintf(domainc, "\tconst char *basename = strsep(&s, \"(\");\n");
+	fprintf(domainc, "\tif (s[0] != '(') return 2;\n\ts++;\n");
+	fprintf(domainc, "\tchar *basename = strsep(&s, \" \");\n");
+	fprintf(domainc, "\tbasename = strsep(&basename, \")\");\n");
 	cat(stmpapply, domainc);
 	remove(stmpapply);
 	fprintf(domainc, "\treturn 2;\n}\n");
@@ -134,7 +136,7 @@ char* preprocess_file(const char *f) {
 	const char *basename = strrchr(f, '/');
 	if (basename == NULL) basename = f;
 	else basename++;
-	snprintf(sfilename, (strlen(f)+10), "/tmp/%s.XXXXXX", basename);
+	snprintf(sfilename, (strlen(f)+15), "/tmp/%s.XXXXXX", basename);
 	int ifilename = mkstemp(sfilename);
 	FILE *basefile = fopen(f, "r"), *file = fdopen(ifilename, "w");
 	if (basefile == NULL) {
@@ -318,15 +320,15 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 					char type[100];
 					fscanf(domain_file, "%[^)|^ ]s", type);
 					while (!is_empty_list(parameters)) {
-						fprintf(domainh, "\tenum %s %s;\n", type, parameters->head->data);
+						fprintf(domainh, "\tenum t_%s %s;\n", type, parameters->head->data);
 						for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
 						fprintf(tmpfile_check_show, "\tfor (int i%d = 0; i%d < LENGTH_%s; i%d++) {\n", par_count, par_count, type, par_count);
 						for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
 						fprintf(tmpfile_check_show, "\t\ts.%s = i%d;\n", parameters->head->data, par_count);
-						size_t toalloc = strlen(parameters->head->data) + strlen(type) + 80;
+						size_t toalloc = 2*strlen(parameters->head->data) + 2*strlen(type) + 120;
 						char *gtp = malloc(strlen(type) + 20), *stringao = malloc(toalloc);
 						snprintf(gtp, (strlen(type)+20), ", get_%s_names(i%d)", type, par_count);
-						snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \",\");\n\t\ttcurts.%s = get_%s_enum(strsep(&token, \")\"));\n", parameters->head->data, type);
+						snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \" \");\n\t\ttcurts.%s = get_%s_enum(strsep(&token, \")\"));\n\t\tif (tcurts.%s == LENGTH_%s) return 2;\n", parameters->head->data, type, parameters->head->data, type);
 						insert(get_type_printf, gtp);
 						insert(apply_act, stringao);
 						par_count++, remove_first(parameters), free(gtp), free(stringao);
@@ -346,10 +348,10 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 					fprintf(tmpfile_check_show, "\tfor (int i%d = 0; i%d < LENGTH_obj; i%d++) {\n", par_count, par_count, par_count);
 					for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
 					fprintf(tmpfile_check_show, "\t\ts.%s = i%d;\n", parameters->head->data, par_count);
-					size_t toalloc = strlen(parameters->head->data) + 85;
+					size_t toalloc = 2*strlen(parameters->head->data) + 120;
 					char gtp[25], *stringao = malloc(toalloc);
 					snprintf(gtp, 25, ", get_obj_names(i%hd)", par_count);
-					snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \",\");\n\t\ttcurts.%s = get_obj_enum(strsep(&token, \")\"));\n", parameters->head->data);
+					snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \" \");\n\t\ttcurts.%s = get_obj_enum(strsep(&token, \")\"));\n\t\tif (tcurts.%s == LENGTH_obj) return 2;\n", parameters->head->data, parameters->head->data);
 					insert(get_type_printf, gtp);
 					insert(apply_act, stringao), free(stringao);
 					par_count++, remove_first(parameters);
@@ -363,13 +365,12 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 	for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
 	while (!is_empty_list(apply_act))
 		fprintf(tmpapply, "%s", apply_act->head->data), remove_first(apply_act);
-	fprintf(tmpfile_check_show, "\tif (checktrue_%s(s)) fprintf(f, \"%s(", act_name, act_name);
+	fprintf(tmpfile_check_show, "\tif (checktrue_%s(s)) fprintf(f, \"(%s", act_name, act_name);
 	fprintf(tmpapply, "\t\tif (checktrue_%s(tcurts)) {\n", act_name);
 	fprintf(tmpapply, "\t\t\tapply_%s(tcurts);\n", act_name);
 	fprintf(tmpapply, "\t\t\treturn 0;\n\t\t} else return 1;\n\t}\n");
 	for (int i = 0; i < par_count; i++)
-		if (i == 0) fprintf(tmpfile_check_show, "%%s");
-		else fprintf(tmpfile_check_show, ",%%s");
+		fprintf(tmpfile_check_show, " %%s");
 	fprintf(tmpfile_check_show, ")\\n\"");
 	while (!is_empty_list(get_type_printf))
 		fprintf(tmpfile_check_show, "%s", get_type_printf->head->data), remove_first(get_type_printf);
@@ -594,7 +595,7 @@ void goal(FILE *problem_file, FILE *domainc, FILE *domainh, Stack *parenthesis_s
 void create_enums(FILE *fc, FILE *fh, SymbolTable *st) {
 	Node_st *aux = st->head;
 	while (aux) {
-		fprintf(fh, "enum %s {\n", aux->data.id);
+		fprintf(fh, "enum t_%s {\n", aux->data.id);
 		fprintf(fc, "%sMap %s_map[LENGTH_%s] = {\n", aux->data.id, aux->data.id, aux->data.id);
 		Node *obj_list = aux->data.list->head;
 		while (obj_list) {
@@ -606,18 +607,19 @@ void create_enums(FILE *fc, FILE *fh, SymbolTable *st) {
 		fprintf(fh, "};\n");
 		fprintf(fh, "typedef struct %sMap {\n"
 				"	const char *str;\n"
-				"	enum %s value;\n}%sMap;\n", aux->data.id, aux->data.id, aux->data.id);
+				"	enum t_%s value;\n}%sMap;\n", aux->data.id, aux->data.id, aux->data.id);
 		fprintf(fc, "};\n");
-		fprintf(fh, "const char *get_%s_names(enum %s e);\n", aux->data.id, aux->data.id);
-		fprintf(fc, "const char *get_%s_names(enum %s e) {\n"
+		fprintf(fh, "const char* get_%s_names(enum t_%s e);\n", aux->data.id, aux->data.id);
+		fprintf(fc, "const char* get_%s_names(enum t_%s e) {\n"
 				"	if (e >= 0 && e < LENGTH_%s)\n"
 				"		return %s_map[e].str;\n"
 				"	return NULL;\n}\n", aux->data.id, aux->data.id, aux->data.id, aux->data.id);
-		fprintf(fc, "enum %s get_%s_enum(const char *s) {\n"
-				"	for (int i = 0; %s_map[i].str != NULL; i++)\n"
+		fprintf(fc, "enum t_%s get_%s_enum(const char *s) {\n"
+				"	if (s == NULL) return LENGTH_%s;\n"
+				"	for (int i = 0; i != LENGTH_%s; i++)\n"
 				"		if (strcmp(s, %s_map[i].str) == 0)\n"
 				"			return %s_map[i].value;\n"
-				"	return LENGTH_%s;\n}\n", aux->data.id, aux->data.id, aux->data.id, aux->data.id, aux->data.id, aux->data.id);
+				"	return LENGTH_%s;\n}\n", aux->data.id, aux->data.id, aux->data.id, aux->data.id, aux->data.id, aux->data.id, aux->data.id);
 		aux = aux->next;
 	}
 }
