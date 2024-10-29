@@ -17,7 +17,36 @@ function show_help {
 	echo "Options:"
 	echo "  -o <file>        Specify the output file name (default: pddl.c/pddl.h)"
 	echo "  -r, --run-repl   Run the REPL executable after parsing PDDL to C"
+	echo "  --no-parsing     Skip parsing and run the REPL directly with pddl.c and pddl.h"
 	echo "  -h, --help       Show this help message and exit"
+	exit 0
+}
+
+function run_repl {
+	if [[ ! -f "$OUTPUT_DIR/$output_file.c" || ! -f "$OUTPUT_DIR/$output_file.h" ]]; then
+		echo "Error: PDDL files (pddl.c or pddl.h) do not exist. Please ensure they are generated correctly." >&2
+		exit 1
+	fi
+	
+	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" repl
+	status=$?
+	if [[ $status -ne 0 ]]; then
+		echo "Error: The 'make repl' command failed." >&2
+		exit $status
+	fi
+
+	REPL_EXEC="$CURRENT_DIR/repl"
+	if [[ -f "$REPL_EXEC" ]]; then
+		"$REPL_EXEC"
+		status=$?
+		if [[ $status -ne 0 ]]; then
+			echo "Error: The 'repl' command failed." >&2
+			exit $status
+		fi
+	else
+		echo "Error: The 'repl' executable not found at $REPL_EXEC." >&2
+		exit 1
+	fi
 	exit 0
 }
 
@@ -29,6 +58,7 @@ while getopts "ho:r-:" opt; do
 		-)	case "${OPTARG}" in
 				help) show_help;; 
 				run-repl) exec_repl=true;;
+				no-parsing) run_repl;;
 				*) echo "Invalid option: --${OPTARG}" >&2; exit 1;;
 			esac
 			;;
@@ -64,46 +94,9 @@ if [[ ! -d "$OUTPUT_DIR" ]]; then
 	mkdir "$OUTPUT_DIR"
 fi
 
-# find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.c -print | while read -r link; do
-#     rm "$link"
-#     cp $SCRIPT_DIR/pddl.c "$link"
-# done
-# find $CURRENT_DIR/$OUTPUT_DIR -maxdepth 1 -type l -lname $SCRIPT_DIR/pddl.h -print | while read -r link; do
-#     rm "$link"
-#     cp $SCRIPT_DIR/pddl.h "$link"
-# done
-# 
-# mv pddl.c pddl.h $SCRIPT_DIR 2> /dev/null
-# ln -sf $SCRIPT_DIR/pddl.c $OUTPUT_DIR/"$output_file".c
-# ln -sf $SCRIPT_DIR/pddl.h $OUTPUT_DIR/"$output_file".h
-
 mv $PDDLC "$OUTPUT_DIR/$output_file.c"
 mv $PDDLH "$OUTPUT_DIR/$output_file.h"
 
 if $exec_repl; then
-	echo "$OUTPUT_DIR $output_file"
-	if [[ ! -f "$OUTPUT_DIR/$output_file.c" || ! -f "$OUTPUT_DIR/$output_file.h" ]]; then
-		echo "Error: PDDL files (pddl.c or pddl.h) do not exist. Please ensure they are generated correctly." >&2
-		exit 1
-	fi
-	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" repl
-	# make PREFIX="$CURRENT_DIR" -C "$SCRIPT_DIR" repl
-	status=$?
-	if [[ $status -ne 0 ]]; then
-		echo "Error: The 'make repl' command failed." >&2
-		exit $status
-	fi
-
-	REPL_EXEC="$CURRENT_DIR/repl"
-	if [[ -f "$REPL_EXEC" ]]; then
-		"$REPL_EXEC"
-		status=$?
-		if [[ $status -ne 0 ]]; then
-			echo "Error: The 'repl' command failed." >&2
-			exit $status
-		fi
-	else
-		echo "Error: The 'repl' executable not found at $REPL_EXEC." >&2
-		exit 1
-	fi
+	run_repl
 fi
