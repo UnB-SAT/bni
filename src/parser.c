@@ -237,7 +237,7 @@ void predicates(FILE *domain_file, FILE *domainc, FILE *domainh, SymbolTable *st
 		}
 		else if (tokend == '(') {
 			push(parenthesis_stack, tokend), fscanf(domain_file, "%[^)|^ ]s", str);
-			fprintf(domainc, "bool %s", str);
+			fprintf(domainc, "bool p_%s", str);
 			fprintf(tmpfileh, "bool checktrue_%s(", str);
 			fprintf(tmpfilec, "bool checktrue_%s(", str);
 		}
@@ -249,7 +249,7 @@ void predicates(FILE *domain_file, FILE *domainc, FILE *domainh, SymbolTable *st
 					fprintf(domainc, "[%ld]", get_qtd(st, "obj"));
 				count = 0;
 			}
-			fprintf(tmpfilec, ") {\n\treturn %s", str);
+			fprintf(tmpfilec, ") {\n\treturn p_%s", str);
 			fprintf(tmpfileh, ");\n");
 			for (int i = 0; i < count_p; i++)
 				fprintf(tmpfilec, "[%s]", tmpstr[i]);
@@ -343,7 +343,7 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 			free_list(parameters_read);
 			if (token == ')') {
 				while (!is_empty_list(parameters)) {
-					fprintf(domainh, "\tenum obj %s;\n", parameters->head->data);
+					fprintf(domainh, "\tenum t_obj %s;\n", parameters->head->data);
 					for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
 					fprintf(tmpfile_check_show, "\tfor (int i%d = 0; i%d < LENGTH_obj; i%d++) {\n", par_count, par_count, par_count);
 					for (int i = 0; i < par_count; i++) fprintf(tmpfile_check_show, "\t");
@@ -477,7 +477,7 @@ void effect(FILE *domain_file, FILE *domainc, Stack *domain, Stack *parenthesis_
 						continue;
 					} else if (strcmp_list(effect, "and") == 0) {free_list(effect); continue;}
 					char *predicate = list_to_str(effect);
-					fprintf(domainc, "\t%s", predicate);
+					fprintf(domainc, "\tp_%s", predicate);
 					free(predicate);
 				} else {
 					//add args dos predicados ?<...>
@@ -513,7 +513,7 @@ void init(FILE *problem_file, FILE *domainc, FILE *domainh, Stack *parenthesis_s
 		}
 		else if (tokenp == '(') {
 			push(parenthesis_stack, tokenp), fscanf(problem_file, "%[^)|^ ]s", str);
-			fprintf(domainc, "\t%s", str);
+			fprintf(domainc, "\tp_%s", str);
 		}
 		else if (tokenp == ')') {
 			pop(parenthesis_stack);
@@ -790,7 +790,7 @@ void create_forall_effect(FILE *toread, FILE *towrite, LinkedList *types_list, i
 					} else if (strcmp_list(word, "and") == 0) {free_list(word); continue;}
 					char *predicate = list_to_str(word);
 					for (int i = 0; i < par_count; i++) fprintf(towrite, "\t");
-					fprintf(towrite, "\t%s", predicate);
+					fprintf(towrite, "\tp_%s", predicate);
 					free(predicate);
 				} else {
 					//add args dos predicados ?<...>
