@@ -16,6 +16,7 @@ typedef struct LinkedList {
 
 LinkedList* create_list(void); 
 int insert(LinkedList *h, Item e); 
+int insert_back(LinkedList *h, Item e);
 void free_list(LinkedList *h); 
 int remove_first(LinkedList *h); 
 int is_empty_list(LinkedList *h); 

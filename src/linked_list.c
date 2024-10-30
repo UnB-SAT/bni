@@ -24,6 +24,24 @@ int insert(LinkedList *h, Item e) {
 	return 1;
 }
 
+int insert_back(LinkedList *h, Item e) {
+	Node *new_node = malloc(sizeof(Node));
+	if (new_node == NULL) return 0;
+	new_node->data = malloc(strlen(e) + 1);
+	if (new_node->data == NULL) {
+		free(new_node);
+		return 0;
+	}
+	strcpy(new_node->data, e);
+	if (h->tail == NULL)
+		h->head = new_node;
+	else
+		h->tail->next = new_node;
+	new_node->next = NULL;
+	h->tail = new_node;
+	return 1;
+}
+
 void free_list(LinkedList *h) {
 	while (h->head != NULL) {
 		Node *aux = h->head;
@@ -37,6 +55,7 @@ int remove_first(LinkedList *h) {
 	if (h->head == NULL) return 0;
 	Node *aux = h->head;
 	h->head = h->head->next;
+	if (h->head == NULL) h->tail = NULL;
 	free(aux->data);
 	free(aux);
 	return 1;

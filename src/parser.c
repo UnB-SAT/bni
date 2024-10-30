@@ -329,14 +329,14 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 						char *gtp = malloc(strlen(type) + 20), *stringao = malloc(toalloc);
 						snprintf(gtp, (strlen(type)+20), ", get_%s_names(i%d)", type, par_count);
 						snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \" \");\n\t\ttcurts.%s = get_%s_enum(strsep(&token, \")\"));\n\t\tif (tcurts.%s == LENGTH_%s) return 2;\n", parameters->head->data, type, parameters->head->data, type);
-						insert(get_type_printf, gtp);
-						insert(apply_act, stringao);
+						insert_back(get_type_printf, gtp);
+						insert_back(apply_act, stringao);
 						par_count++, remove_first(parameters), free(gtp), free(stringao);
 					}
 				}
 				else {
 					char *par = list_to_str(parameters_read);
-					insert(parameters, par);
+					insert_back(parameters, par);
 					free(par);
 				}
 			}
@@ -352,8 +352,8 @@ void parameters(FILE *domain_file, FILE *domainh, FILE *tmpapply, FILE *tmpfile_
 					char gtp[25], *stringao = malloc(toalloc);
 					snprintf(gtp, 25, ", get_obj_names(i%hd)", par_count);
 					snprintf(stringao, toalloc, "\t\ttoken = strsep(&s, \" \");\n\t\ttcurts.%s = get_obj_enum(strsep(&token, \")\"));\n\t\tif (tcurts.%s == LENGTH_obj) return 2;\n", parameters->head->data, parameters->head->data);
-					insert(get_type_printf, gtp);
-					insert(apply_act, stringao), free(stringao);
+					insert_back(get_type_printf, gtp);
+					insert_back(apply_act, stringao), free(stringao);
 					par_count++, remove_first(parameters);
 				}
 				break;
