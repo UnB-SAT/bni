@@ -81,17 +81,19 @@ int ask_yes_no(const char *question) {
 	char *response;
 	for ( ; ; ) {
 		response = readline(question);
-		to_uppercase(response);
-		if (response) {
-			if (strcmp(response, "Y") == 0 || strcmp(response, "YES") == 0) {
-				free(response);
-				return 1;
-			} else if (strcmp(response, "N") == 0 || strcmp(response, "NO") == 0 || (response && response[0] == '\0')) {
-				free(response);
-				return 0;
-			}
-			free(response);
+		if (!response) {
+			printf("\nEnd of input detected.\n");
+			return 0;
 		}
+		to_uppercase(response);
+		if (strcmp(response, "Y") == 0 || strcmp(response, "YES") == 0) {
+			free(response);
+			return 1;
+		} else if (strcmp(response, "N") == 0 || strcmp(response, "NO") == 0 || (response && response[0] == '\0')) {
+			free(response);
+			return 0;
+		}
+		free(response);
 		printf("Please answer Y or N.\n");
 	}
 }
