@@ -8,6 +8,8 @@ PDDLC=$BASENAME.pddl.c
 PDDLH=$BASENAME.pddl.h
 output_file="pddl"
 exec_repl=false
+exec_val=false
+PLAN_FILE=""
 
 rm $BASENAME
 
@@ -15,10 +17,41 @@ function show_help {
 	echo "Usage: $0 [options] <domain_file> <problem_file>"
 	echo
 	echo "Options:"
-	echo "  -o <file>        Specify the output file name (default: pddl.c/pddl.h)"
-	echo "  -r, --run-repl   Run the REPL executable after parsing PDDL to C"
-	echo "  --no-parsing     Skip parsing and run the REPL directly with pddl.c and pddl.h"
-	echo "  -h, --help       Show this help message and exit"
+	echo "  -o <file>          Specify the output file name (default: pddl.c/pddl.h)"
+	echo "  -r, --run-repl     Run the REPL executable after parsing PDDL to C"
+    echo "  --validate <plan>  Validate using the provided plan file"
+	echo "  --no-parsing       Skip parsing and run the REPL directly with pddl.c and pddl.h"
+	echo "  -h, --help         Show this help message and exit"
+	exit 0
+}
+
+function validate {
+	local plan=$1
+
+	if [[ ! -f "$OUTPUT_DIR/$output_file.c" || ! -f "$OUTPUT_DIR/$output_file.h" ]]; then
+		echo "Error: PDDL files (pddl.c or pddl.h) do not exist. Please ensure they are generated correctly." >&2
+		exit 1
+	fi
+
+	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" val > /dev/null 2>&1
+	status=$?
+	if [[ $status -ne 0 ]]; then
+		echo "Error: The 'make val' command failed." >&2
+		exit $status
+	fi
+
+	VAL_EXEC="$CURRENT_DIR/val"
+	if [[ -f "$VAL_EXEC" ]]; then
+		"$VAL_EXEC" < "$plan"
+		status=$?
+		if [[ $status -ne 0 ]]; then
+			echo "Error: The 'val' command failed." >&2
+			exit $status
+		fi
+	else
+		echo "Error: The 'val' executable not found at $VAL_EXEC." >&2
+		exit 1
+	fi
 	exit 0
 }
 
@@ -27,8 +60,8 @@ function run_repl {
 		echo "Error: PDDL files (pddl.c or pddl.h) do not exist. Please ensure they are generated correctly." >&2
 		exit 1
 	fi
-	
-	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" repl
+
+	make PREFIX="$CURRENT_DIR" PDDL_FILE="$OUTPUT_DIR/$output_file.c" PDDL_HEADER="$OUTPUT_DIR/$output_file.h" -C "$SCRIPT_DIR" repl > /dev/null 2>&1
 	status=$?
 	if [[ $status -ne 0 ]]; then
 		echo "Error: The 'make repl' command failed." >&2
@@ -56,8 +89,9 @@ while getopts "ho:r-:" opt; do
 		o) output_file="$OPTARG";;
 		r) exec_repl=true;;
 		-)	case "${OPTARG}" in
-				help) show_help;; 
+				help) show_help;;
 				run-repl) exec_repl=true;;
+                validate) exec_val=true; PLAN_FILE="${!OPTIND}"; OPTIND=$((OPTIND + 1));;
 				no-parsing) run_repl;;
 				*) echo "Invalid option: --${OPTARG}" >&2; exit 1;;
 			esac
@@ -90,13 +124,10 @@ if [[ $status -ne 0 ]]; then
 	exit $status
 fi
 
-if [[ ! -d "$OUTPUT_DIR" ]]; then
-	mkdir "$OUTPUT_DIR"
-fi
+[[ ! -d "$OUTPUT_DIR" ]] && mkdir "$OUTPUT_DIR"
 
 mv $PDDLC "$OUTPUT_DIR/$output_file.c"
 mv $PDDLH "$OUTPUT_DIR/$output_file.h"
 
-if $exec_repl; then
-	run_repl
-fi
+[[ $exec_repl == true ]] && run_repl
+[[ $exec_val == true ]] && validate $PLAN_FILE

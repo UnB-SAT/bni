@@ -10,16 +10,18 @@ READLINE_FLAGS = -lreadline
 # Source and object files
 SRC_DIR := src
 REPL_DIR := src
+VAL_DIR := src
 SRC := $(SRC_DIR)/parser.c $(SRC_DIR)/linked_list.c $(SRC_DIR)/stack.c $(SRC_DIR)/symbol_table.c
 REPL_SRC := $(REPL_DIR)/repl.c
+VAL_SRC := $(VAL_DIR)/val.c
 OBJ = $(SRC:.c=.o)
 TARGET = parser
 PREFIX := $(CURDIR)
 
 # Default values for PDDL files (override via command line)
 OUTPUT_DIR := $(PREFIX)/bni.out
-PDDL_FILE := $(PREFIX)/$(OUTPUT_DIR)/pddl.c
-PDDL_HEADER := $(PREFIX)/$(OUTPUT_DIR)/pddl.h
+PDDL_FILE := $(OUTPUT_DIR)/pddl.c
+PDDL_HEADER := $(OUTPUT_DIR)/pddl.h
 
 # Default target
 all: $(TARGET)
@@ -37,6 +39,11 @@ $(TARGET): $(OBJ)
 repl:
 	$(CC) $(RUN_FLAG) -I$(OUTPUT_DIR) $(PDDL_FILE) -DPDDL_HEADER=\"$(PDDL_HEADER)\" $(REPL_SRC) $(READLINE_FLAGS) -o $(PREFIX)/$@
 	# $(CC) $(RUN_FLAG) $(CURDIR)/pddl.c $(PDDL_FLAGS) $(REPL_SRC) $(READLINE_FLAGS) -o $(PREFIX)/$@
+
+# Complile VAL and pddl.c
+.PHONY: val
+val:
+	$(CC) $(RUN_FLAG) -I$(OUTPUT_DIR) $(PDDL_FILE) -DPDDL_HEADER=\"$(PDDL_HEADER)\" $(VAL_SRC) -o $(PREFIX)/$@
 
 # Clean up build files
 clean:
