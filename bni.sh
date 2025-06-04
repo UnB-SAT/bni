@@ -43,7 +43,7 @@ function validate {
 
 	VAL_EXEC="$CURRENT_DIR/val"
 	if [[ -f "$VAL_EXEC" ]]; then
-		"$VAL_EXEC" < "$plan"
+		"$VAL_EXEC" "$plan"
 		status=$?
 		if [[ $status -ne 0 ]]; then
 			echo "Error: The 'val' command failed." >&2
