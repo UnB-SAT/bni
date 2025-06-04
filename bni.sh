@@ -7,6 +7,7 @@ BASENAME=$(mktemp)
 PDDLC=$BASENAME.pddl.c
 PDDLH=$BASENAME.pddl.h
 output_file="pddl"
+noparsing=false
 exec_repl=false
 exec_val=false
 PLAN_FILE=""
@@ -20,7 +21,7 @@ function show_help {
 	echo "  -o <file>          Specify the output file name (default: pddl.c/pddl.h)"
 	echo "  -r, --run-repl     Run the REPL executable after parsing PDDL to C"
     echo "  --validate <plan>  Validate using the provided plan file"
-	echo "  --no-parsing       Skip parsing and run the REPL directly with pddl.c and pddl.h"
+	echo "  --no-parsing       Skip parsing for the files pddl.c and pddl.h"
 	echo "  -h, --help         Show this help message and exit"
 	exit 0
 }
@@ -92,7 +93,7 @@ while getopts "ho:r-:" opt; do
 				help) show_help;;
 				run-repl) exec_repl=true;;
                 validate) exec_val=true; PLAN_FILE="${!OPTIND}"; OPTIND=$((OPTIND + 1));;
-				no-parsing) run_repl;;
+				no-parsing) noparsing=true;;
 				*) echo "Invalid option: --${OPTARG}" >&2; exit 1;;
 			esac
 			;;
@@ -104,6 +105,9 @@ shift $((OPTIND-1))
 if [[ "$#" -ne 2 ]]; then
 	show_help
 	exit 1
+elif [[ $noparsing == true ]]; then
+	[[ $exec_repl == ture ]] && run_repl
+	[[ $exec_val == true ]] && validate $PLAN_FILE
 fi
 
 DOMAIN="$1"
